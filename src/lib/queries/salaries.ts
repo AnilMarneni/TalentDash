@@ -1,5 +1,5 @@
 import { prisma } from "../db";
-import { Level, Currency } from "../../generated/prisma/client";
+import { Level, Currency, Prisma } from "../../generated/prisma/client";
 
 export interface GetSalariesParams {
   company?: string;
@@ -17,7 +17,7 @@ export async function getSalaries(params: GetSalariesParams) {
   const limit = Math.min(100, Math.max(1, params.limit || 25));
   const skip = (page - 1) * limit;
 
-  const where: any = {};
+  const where: Prisma.SalaryWhereInput = {};
 
   if (params.company) {
     where.company = {
@@ -48,7 +48,7 @@ export async function getSalaries(params: GetSalariesParams) {
     }
   }
 
-  let orderBy: any = { total_compensation: "desc" };
+  let orderBy: Prisma.SalaryOrderByWithRelationInput = { total_compensation: "desc" };
   if (params.sort === "total_comp_asc") {
     orderBy = { total_compensation: "asc" };
   } else if (params.sort === "date_desc") {

@@ -57,19 +57,19 @@ export function mapLevelToColor(level: string): string {
   switch (level) {
     case "L3":
     case "SDE_I":
-      return "bg-slate-50 text-slate-700 border-slate-200";
+      return "bg-zinc-50 text-zinc-700 border-zinc-200";
     case "L4":
     case "SDE_II":
-      return "bg-blue-50 text-blue-700 border-blue-200";
+      return "bg-slate-50 text-slate-700 border-slate-200";
     case "L5":
     case "SDE_III":
-      return "bg-indigo-50 text-indigo-700 border-indigo-200";
+      return "bg-emerald-50/60 text-emerald-800 border-emerald-200/60";
     case "L6":
     case "STAFF":
-      return "bg-purple-50 text-purple-700 border-purple-200";
+      return "bg-blue-50/60 text-blue-800 border-blue-200/60";
     case "PRINCIPAL":
       return "bg-rose-50 text-rose-700 border-rose-200";
     default:
-      return "bg-gray-50 text-gray-700 border-gray-200";
+      return "bg-zinc-50 text-zinc-500 border-zinc-200";
   }
 }

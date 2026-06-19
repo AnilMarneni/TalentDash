@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { getComparison } from "../../lib/queries/compare";
 import { getSalaries } from "../../lib/queries/salaries";
-import { formatSalaryCompact, mapLevelToBadge } from "../../lib/ui-helpers";
+import { formatSalaryCompact, mapLevelToBadge, mapLevelToColor } from "../../lib/ui-helpers";
 import { generateSeoMetadata } from "../../lib/seo";
 
 interface PageProps {
@@ -12,7 +12,7 @@ interface PageProps {
   }>;
 }
 
-export async function generateMetadata(props: PageProps): Promise<Metadata> {
+export async function generateMetadata(): Promise<Metadata> {
   return generateSeoMetadata({
     title: "Salary Comparison Engine",
     description: "Compare total compensation, base salaries, bonuses, and equity side-by-side. View detailed deltas and find the higher paying packages.",
@@ -39,13 +39,9 @@ export default async function ComparePage(props: PageProps) {
   const s1Id = searchParams.s1;
   const s2Id = searchParams.s2;
 
-  // Fetch comparison details if both IDs are present
   const comparison = s1Id && s2Id ? await getComparison(s1Id, s2Id) : null;
-
-  // Fetch list of recent salaries to allow the user to select them for comparison
   const { data: recentSalaries } = await getSalaries({ limit: 15 });
 
-  // Helper to generate the URL for setting/clearing s1 and s2
   function getSelectionUrl(id: string, slot: "s1" | "s2") {
     const params = new URLSearchParams();
     if (slot === "s1") {
@@ -58,7 +54,6 @@ export default async function ComparePage(props: PageProps) {
     return `/compare?${params.toString()}`;
   }
 
-  // Determine the winner (using normalized USD values for comparison if currencies differ)
   let s1Winner = false;
   let s2Winner = false;
   if (comparison) {
@@ -68,301 +63,313 @@ export default async function ComparePage(props: PageProps) {
     if (s2Val > s1Val) s2Winner = true;
   }
 
-  // Delta helpers
   function renderDelta(value: number, currency: string, isBig: boolean = false) {
     if (value > 0) {
       return (
-        <span className={`text-emerald-600 font-bold font-mono ${isBig ? "text-xl" : "text-sm"}`}>
+        <span className={`inline-flex items-center text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded font-mono font-bold ${isBig ? "text-base" : "text-xs"}`}>
           +{formatSalaryCompact(value, currency)}
         </span>
       );
     } else if (value < 0) {
       return (
-        <span className={`text-rose-600 font-bold font-mono ${isBig ? "text-xl" : "text-sm"}`}>
+        <span className={`inline-flex items-center text-rose-700 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded font-mono font-bold ${isBig ? "text-base" : "text-xs"}`}>
           -{formatSalaryCompact(Math.abs(value), currency)}
         </span>
       );
     }
-    return <span className="text-zinc-400 font-medium font-mono">--</span>;
+    return <span className="text-zinc-400 font-medium font-mono text-xs">--</span>;
   }
 
   return (
-    <div className="flex-1 bg-zinc-50 min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white border-b border-zinc-200">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/salaries" className="text-xl font-bold tracking-tight text-zinc-950 flex items-center gap-1">
-              <span className="text-rose-500">Talent</span>
-              <span>Dash</span>
-            </Link>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link href="/salaries" className="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition">
-                Salaries
-              </Link>
-              <Link href="/compare" className="text-sm font-semibold text-zinc-900 border-b-2 border-rose-500 pt-1 pb-1">
-                Compare
-              </Link>
-            </nav>
-          </div>
-          <div>
-            <Link
-              href="/salaries"
-              className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-200 bg-white px-4 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition"
-            >
-              Browse Salaries
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
+    <div className="flex-1 bg-zinc-50/50 min-h-screen">
+      <main className="max-w-7xl mx-auto px-6 py-6">
         {/* Title */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-zinc-950 tracking-tight">Salary Comparison Engine</h1>
-          <p className="text-sm text-zinc-500 mt-1">
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-zinc-950 tracking-tight">Salary Comparison Engine</h1>
+          <p className="text-xs text-zinc-500 mt-0.5 font-medium">
             Compare two offer packages side-by-side to analyze deltas in base salary, bonus, and stock.
           </p>
         </div>
 
-        {/* Top select status banners */}
-        {(!s1Id || !s2Id) && (
-          <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 mb-8 text-sm text-rose-800 flex items-center gap-3">
-            <span className="text-base">💡</span>
-            <span>
-              {!s1Id && !s2Id
-                ? "Select two salary records from the list below to begin comparison."
-                : !s1Id
-                ? "Select a first salary record (Slot 1) to compare."
-                : "Select a second salary record (Slot 2) to complete comparison."}
-            </span>
+        {/* Side-by-side Comparison Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 mb-8 items-stretch">
+          {/* Card A */}
+          <div className="lg:col-span-3 flex">
+            {comparison ? (
+              <div className={`w-full bg-white border rounded-xl p-5 shadow-xs flex flex-col justify-between relative transition-all ${
+                s1Winner ? "border-rose-500 ring-1 ring-rose-500/10 shadow-xs" : "border-zinc-200"
+              }`}>
+                {s1Winner && (
+                  <span className="absolute -top-2.5 left-4 bg-rose-600 text-white text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-xs">
+                    🏆 Higher Compensation
+                  </span>
+                )}
+                
+                <div>
+                  <div className="mb-4">
+                    <Link
+                      href={`/companies/${comparison.salary1.company.slug}`}
+                      className="text-lg font-bold text-zinc-950 hover:text-rose-600 hover:underline transition-colors"
+                    >
+                      {comparison.salary1.company.name}
+                    </Link>
+                    <p className="text-xs font-semibold text-zinc-600 mt-0.5">{comparison.salary1.role}</p>
+                    <div className="flex gap-1.5 mt-2">
+                      <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold border ${mapLevelToColor(comparison.salary1.level)}`}>
+                        {mapLevelToBadge(comparison.salary1.level)}
+                      </span>
+                      <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold bg-zinc-50 text-zinc-600 border border-zinc-300">
+                        {comparison.salary1.location}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3.5 pt-4 border-t border-zinc-100">
+                    <div>
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-0.5">
+                        Total Compensation
+                      </span>
+                      <div className="text-2xl font-black text-rose-600 font-mono tracking-tight">
+                        {formatSalaryCompact(Number(comparison.salary1.total_compensation), comparison.salary1.currency)}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block mb-0.5">Base</span>
+                        <span className="text-xs font-semibold text-zinc-950 font-mono">
+                          {formatSalaryCompact(Number(comparison.salary1.base_salary), comparison.salary1.currency)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block mb-0.5">Bonus</span>
+                        <span className="text-xs font-semibold text-zinc-950 font-mono">
+                          {formatSalaryCompact(Number(comparison.salary1.bonus), comparison.salary1.currency)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block mb-0.5">Stock</span>
+                        <span className="text-xs font-semibold text-zinc-950 font-mono">
+                          {formatSalaryCompact(Number(comparison.salary1.stock), comparison.salary1.currency)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-wider block">Experience</span>
+                      <span className="text-xs font-semibold text-zinc-950 mt-0.5 block">{comparison.salary1.experience_years} years</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 pt-3 border-t border-zinc-100 flex justify-between">
+                  <Link
+                    href={`/compare?${s2Id ? `s2=${s2Id}` : ""}`}
+                    className="text-[10px] font-bold text-zinc-500 hover:text-zinc-700 transition-colors"
+                  >
+                    Remove package
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full bg-white border border-zinc-200 border-dashed rounded-xl p-8 text-center flex flex-col items-center justify-center min-h-[320px] shadow-xs">
+                <div className="text-2xl mb-2 text-zinc-300">⚖️</div>
+                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Slot A: Empty</h3>
+                <p className="text-[11px] text-zinc-600 max-w-[200px] leading-normal">
+                  Select a salary record from the list below to begin comparison.
+                </p>
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Side-by-side Comparison View */}
-        {comparison && (
-          <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 mb-8 items-start">
-            {/* Record 1 Card */}
-            <div className={`lg:col-span-3 bg-white border rounded-2xl p-6 shadow-sm relative transition ${s1Winner ? "border-rose-300 ring-2 ring-rose-500/20" : "border-zinc-200"}`}>
-              {s1Winner && (
-                <span className="absolute -top-3 left-6 bg-rose-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm">
-                  🏆 Higher Compensation
-                </span>
-              )}
-              
-              <div className="mb-6">
-                <Link href={`/companies/${comparison.salary1.company.slug}`} className="text-2xl font-black text-zinc-900 hover:text-rose-500 hover:underline">
-                  {comparison.salary1.company.name}
-                </Link>
-                <p className="text-base font-bold text-zinc-600 mt-1">{comparison.salary1.role}</p>
-                <div className="flex gap-2 mt-2">
-                  <span className="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-zinc-100 text-zinc-800">
-                    {mapLevelToBadge(comparison.salary1.level)}
-                  </span>
-                  <span className="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-zinc-50 text-zinc-500 border border-zinc-200">
-                    {comparison.salary1.location}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-4 pt-4 border-t border-zinc-100">
+          {/* Deltas Card (Middle Divider) */}
+          <div className="lg:col-span-1 flex items-stretch">
+            {comparison ? (
+              <div className="w-full bg-white border border-zinc-200 rounded-xl p-5 shadow-xs flex flex-col items-center justify-center text-center gap-5 self-stretch min-h-[320px]">
                 <div>
-                  <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
-                    Total Compensation
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-0.5">
+                    Deltas
                   </span>
-                  <div className="text-3xl font-black text-rose-500 font-mono">
-                    {formatSalaryCompact(Number(comparison.salary1.total_compensation), comparison.salary1.currency)}
-                  </div>
+                  <span className="text-[9px] text-zinc-500 block font-semibold">(Slot A vs B)</span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-4 w-full">
                   <div>
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Base Salary</span>
-                    <span className="text-sm font-semibold text-zinc-800 font-mono">
-                      {formatSalaryCompact(Number(comparison.salary1.base_salary), comparison.salary1.currency)}
-                    </span>
+                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block mb-1">Total Comp</span>
+                    {renderDelta(comparison.delta.total_compensation, comparison.salary1.currency, true)}
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Bonus</span>
-                    <span className="text-sm font-semibold text-zinc-800 font-mono">
-                      {formatSalaryCompact(Number(comparison.salary1.bonus), comparison.salary1.currency)}
-                    </span>
+                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block mb-1">Base</span>
+                    {renderDelta(comparison.delta.base_salary, comparison.salary1.currency)}
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Stock / Yr</span>
-                    <span className="text-sm font-semibold text-zinc-800 font-mono">
-                      {formatSalaryCompact(Number(comparison.salary1.stock), comparison.salary1.currency)}
+                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block mb-1">Bonus</span>
+                    {renderDelta(comparison.delta.bonus, comparison.salary1.currency)}
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block mb-1">Stock</span>
+                    {renderDelta(comparison.delta.stock, comparison.salary1.currency)}
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block mb-0.5">Experience</span>
+                    <span className="text-xs font-bold font-mono text-zinc-800 bg-zinc-50 border border-zinc-300 px-1.5 py-0.5 rounded">
+                      {comparison.delta.experience_years > 0 ? `+${comparison.delta.experience_years}` : comparison.delta.experience_years} yrs
                     </span>
                   </div>
                 </div>
-
-                <div>
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Experience</span>
-                  <span className="text-sm font-semibold text-zinc-700">{comparison.salary1.experience_years} Years</span>
-                </div>
               </div>
-
-              <div className="mt-6 pt-4 border-t border-zinc-100 flex justify-between">
-                <Link href={`/compare?s2=${s2Id || ""}`} className="text-xs font-bold text-zinc-400 hover:text-zinc-600 transition">
-                  Remove record
-                </Link>
+            ) : (
+              <div className="w-full border border-transparent rounded-xl flex items-center justify-center text-center min-h-[100px] lg:min-h-0">
+                <span className="text-xs font-black text-zinc-500 tracking-wider">VS</span>
               </div>
-            </div>
-
-            {/* Delta Column */}
-            <div className="lg:col-span-1 bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center gap-6 self-stretch min-h-[300px]">
-              <div>
-                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-wider block mb-1">
-                  Deltas
-                </span>
-                <span className="text-xs text-zinc-400 block mb-3 font-semibold">(S1 minus S2)</span>
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-0.5">Total Comp</span>
-                  {renderDelta(comparison.delta.total_compensation, comparison.salary1.currency, true)}
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-0.5">Base Salary</span>
-                  {renderDelta(comparison.delta.base_salary, comparison.salary1.currency)}
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-0.5">Bonus</span>
-                  {renderDelta(comparison.delta.bonus, comparison.salary1.currency)}
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-0.5">Stock / Yr</span>
-                  {renderDelta(comparison.delta.stock, comparison.salary1.currency)}
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-0.5">Exp Delta</span>
-                  <span className="text-sm font-semibold font-mono text-zinc-700">
-                    {comparison.delta.experience_years > 0 ? `+${comparison.delta.experience_years}` : comparison.delta.experience_years} yrs
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Record 2 Card */}
-            <div className={`lg:col-span-3 bg-white border rounded-2xl p-6 shadow-sm relative transition ${s2Winner ? "border-rose-300 ring-2 ring-rose-500/20" : "border-zinc-200"}`}>
-              {s2Winner && (
-                <span className="absolute -top-3 left-6 bg-rose-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm">
-                  🏆 Higher Compensation
-                </span>
-              )}
-              
-              <div className="mb-6">
-                <Link href={`/companies/${comparison.salary2.company.slug}`} className="text-2xl font-black text-zinc-900 hover:text-rose-500 hover:underline">
-                  {comparison.salary2.company.name}
-                </Link>
-                <p className="text-base font-bold text-zinc-600 mt-1">{comparison.salary2.role}</p>
-                <div className="flex gap-2 mt-2">
-                  <span className="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-zinc-100 text-zinc-800">
-                    {mapLevelToBadge(comparison.salary2.level)}
-                  </span>
-                  <span className="inline-flex px-2 py-0.5 rounded text-xs font-semibold bg-zinc-50 text-zinc-500 border border-zinc-200">
-                    {comparison.salary2.location}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-4 pt-4 border-t border-zinc-100">
-                <div>
-                  <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
-                    Total Compensation
-                  </span>
-                  <div className="text-3xl font-black text-rose-500 font-mono">
-                    {formatSalaryCompact(Number(comparison.salary2.total_compensation), comparison.salary2.currency)}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Base Salary</span>
-                    <span className="text-sm font-semibold text-zinc-800 font-mono">
-                      {formatSalaryCompact(Number(comparison.salary2.base_salary), comparison.salary2.currency)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Bonus</span>
-                    <span className="text-sm font-semibold text-zinc-800 font-mono">
-                      {formatSalaryCompact(Number(comparison.salary2.bonus), comparison.salary2.currency)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Stock / Yr</span>
-                    <span className="text-sm font-semibold text-zinc-800 font-mono">
-                      {formatSalaryCompact(Number(comparison.salary2.stock), comparison.salary2.currency)}
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Experience</span>
-                  <span className="text-sm font-semibold text-zinc-700">{comparison.salary2.experience_years} Years</span>
-                </div>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-zinc-100 flex justify-between">
-                <Link href={`/compare?s1=${s1Id || ""}`} className="text-xs font-bold text-zinc-400 hover:text-zinc-600 transition">
-                  Remove record
-                </Link>
-              </div>
-            </div>
+            )}
           </div>
-        )}
 
-        {/* Selection Area */}
+          {/* Card B */}
+          <div className="lg:col-span-3 flex">
+            {comparison ? (
+              <div className={`w-full bg-white border rounded-xl p-5 shadow-xs flex flex-col justify-between relative transition-all ${
+                s2Winner ? "border-rose-500 ring-1 ring-rose-500/10 shadow-xs" : "border-zinc-200"
+              }`}>
+                {s2Winner && (
+                  <span className="absolute -top-2.5 left-4 bg-rose-600 text-white text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-xs">
+                    🏆 Higher Compensation
+                  </span>
+                )}
+                
+                <div>
+                  <div className="mb-4">
+                    <Link
+                      href={`/companies/${comparison.salary2.company.slug}`}
+                      className="text-lg font-bold text-zinc-950 hover:text-rose-600 hover:underline transition-colors"
+                    >
+                      {comparison.salary2.company.name}
+                    </Link>
+                    <p className="text-xs font-semibold text-zinc-600 mt-0.5">{comparison.salary2.role}</p>
+                    <div className="flex gap-1.5 mt-2">
+                      <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold border ${mapLevelToColor(comparison.salary2.level)}`}>
+                        {mapLevelToBadge(comparison.salary2.level)}
+                      </span>
+                      <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold bg-zinc-50 text-zinc-600 border border-zinc-300">
+                        {comparison.salary2.location}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3.5 pt-4 border-t border-zinc-100">
+                    <div>
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-0.5">
+                        Total Compensation
+                      </span>
+                      <div className="text-2xl font-black text-rose-600 font-mono tracking-tight">
+                        {formatSalaryCompact(Number(comparison.salary2.total_compensation), comparison.salary2.currency)}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block mb-0.5">Base</span>
+                        <span className="text-xs font-semibold text-zinc-950 font-mono">
+                          {formatSalaryCompact(Number(comparison.salary2.base_salary), comparison.salary2.currency)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block mb-0.5">Bonus</span>
+                        <span className="text-xs font-semibold text-zinc-950 font-mono">
+                          {formatSalaryCompact(Number(comparison.salary2.bonus), comparison.salary2.currency)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block mb-0.5">Stock</span>
+                        <span className="text-xs font-semibold text-zinc-950 font-mono">
+                          {formatSalaryCompact(Number(comparison.salary2.stock), comparison.salary2.currency)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block">Experience</span>
+                      <span className="text-xs font-semibold text-zinc-900 mt-0.5 block">{comparison.salary2.experience_years} years</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 pt-3 border-t border-zinc-100 flex justify-between">
+                  <Link
+                    href={`/compare?${s1Id ? `s1=${s1Id}` : ""}`}
+                    className="text-[10px] font-bold text-zinc-500 hover:text-zinc-700 transition-colors"
+                  >
+                    Remove package
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full bg-white border border-zinc-200 border-dashed rounded-xl p-8 text-center flex flex-col items-center justify-center min-h-[320px] shadow-xs">
+                <div className="text-2xl mb-2 text-zinc-300">⚖️</div>
+                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Slot B: Empty</h3>
+                <p className="text-[11px] text-zinc-600 max-w-[200px] leading-normal">
+                  Select a second salary record from the list below to complete comparison.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Selector Table */}
         <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50">
-            <h2 className="text-sm font-bold text-zinc-500 uppercase tracking-wider">
+          <div className="px-6 py-3.5 border-b border-zinc-200/60 bg-zinc-50/50">
+            <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
               Select verified records to compare
             </h2>
           </div>
-          <div className="divide-y divide-zinc-100 overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[600px]">
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
-                <tr className="border-b border-zinc-100 text-xs font-semibold text-zinc-400 uppercase tracking-wider bg-zinc-50/50">
-                  <th className="px-6 py-3">Company</th>
-                  <th className="px-6 py-3">Role</th>
-                  <th className="px-6 py-3">Level</th>
-                  <th className="px-6 py-3">Location</th>
-                  <th className="px-6 py-3 text-right">Total Comp</th>
-                  <th className="px-6 py-3 text-center">Action</th>
+                <tr className="sticky top-0 bg-white border-b border-zinc-200 text-[10px] font-bold text-zinc-500 uppercase tracking-wider z-10 shadow-[0_1px_0_0_rgba(228,228,231,0.6)]">
+                  <th className="px-6 py-3.5">Company</th>
+                  <th className="px-6 py-3.5">Role</th>
+                  <th className="px-6 py-3.5">Level</th>
+                  <th className="px-6 py-3.5">Location</th>
+                  <th className="px-6 py-3.5 text-right text-zinc-900 font-bold bg-rose-500/[0.01]">Total Comp</th>
+                  <th className="px-6 py-3.5 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100 text-xs font-semibold">
+              <tbody className="divide-y divide-zinc-100 text-xs font-semibold text-zinc-600">
                 {recentSalaries.map((s) => (
-                  <tr key={s.id} className="hover:bg-zinc-50/30 transition-colors">
-                    <td className="px-6 py-3.5 text-zinc-950 font-bold">{s.company.name}</td>
-                    <td className="px-6 py-3.5 text-zinc-600">{s.role}</td>
-                    <td className="px-6 py-3.5 text-zinc-500">{mapLevelToBadge(s.level)}</td>
-                    <td className="px-6 py-3.5 text-zinc-400">{s.location}</td>
-                    <td className="px-6 py-3.5 text-right font-mono text-rose-500 font-bold">
+                  <tr key={s.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/[0.1] transition-colors">
+                    <td className="px-6 py-3.5 text-zinc-900 font-bold">{s.company.name}</td>
+                    <td className="px-6 py-3.5 text-zinc-800 font-medium">{s.role}</td>
+                    <td className="px-6 py-3.5">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${mapLevelToColor(s.level)}`}>
+                        {mapLevelToBadge(s.level)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3.5 text-zinc-600">{s.location}</td>
+                    <td className="px-6 py-3.5 text-right font-mono text-rose-600 font-bold bg-rose-500/[0.015]">
                       {formatSalaryCompact(Number(s.total_compensation), s.currency)}
                     </td>
-                    <td className="px-6 py-3.5 text-center flex items-center justify-center gap-4">
+                    <td className="px-6 py-3.5 text-center flex items-center justify-center gap-3">
                       {s1Id === s.id ? (
-                        <span className="text-[10px] text-zinc-400 border border-zinc-200 rounded px-2 py-0.5 bg-zinc-50">
+                        <span className="text-[9px] text-zinc-600 border border-zinc-300 rounded px-2 py-0.5 bg-zinc-100/50 font-bold">
                           Selected S1
                         </span>
                       ) : (
                         <Link
                           href={getSelectionUrl(s.id, "s1")}
-                          className="text-[10px] text-rose-500 hover:text-white border border-rose-200 hover:bg-rose-500 px-2 py-0.5 rounded transition cursor-pointer"
+                          className="text-[9px] text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-200 px-2 py-0.5 rounded transition font-bold"
                         >
                           Select S1
                         </Link>
                       )}
                       {s2Id === s.id ? (
-                        <span className="text-[10px] text-zinc-400 border border-zinc-200 rounded px-2 py-0.5 bg-zinc-50">
+                        <span className="text-[9px] text-zinc-600 border border-zinc-300 rounded px-2 py-0.5 bg-zinc-100/50 font-bold">
                           Selected S2
                         </span>
                       ) : (
                         <Link
                           href={getSelectionUrl(s.id, "s2")}
-                          className="text-[10px] text-zinc-700 hover:text-white border border-zinc-300 hover:bg-zinc-700 px-2 py-0.5 rounded transition cursor-pointer"
+                          className="text-[9px] text-zinc-700 bg-zinc-50 hover:bg-zinc-800 hover:text-white border border-zinc-300 px-2 py-0.5 rounded transition font-bold"
                         >
                           Select S2
                         </Link>

@@ -49,7 +49,24 @@ export function generateSeoMetadata({
   };
 }
 
-export function generateCompanyJsonLd(company: any, medianComp: number, recordsCount: number) {
+interface CompanyJsonLdInput {
+  name: string;
+  slug: string;
+  industry: string;
+  headquarters: string;
+}
+
+interface SalaryJsonLdItem {
+  role: string;
+  location: string;
+  currency: string;
+  total_compensation: number | bigint;
+  company: {
+    name: string;
+  };
+}
+
+export function generateCompanyJsonLd(company: CompanyJsonLdInput, medianComp: number, recordsCount: number) {
   const siteUrl = SITE_URL;
   return {
     __html: JSON.stringify({
@@ -74,7 +91,7 @@ export function generateCompanyJsonLd(company: any, medianComp: number, recordsC
   };
 }
 
-export function generateSalariesJsonLd(salaries: any[]) {
+export function generateSalariesJsonLd(salaries: SalaryJsonLdItem[]) {
   return {
     __html: JSON.stringify({
       "@context": "https://schema.org",

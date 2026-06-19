@@ -1,4 +1,10 @@
+import { Level } from "../generated/prisma/client";
 import { LevelDistributionItem } from "../types/company";
+
+interface SalaryLike {
+  level: Level;
+  total_compensation: number | bigint;
+}
 
 export function calculateMedian(values: number[]): number {
   if (values.length === 0) return 0;
@@ -10,7 +16,7 @@ export function calculateMedian(values: number[]): number {
   return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 }
 
-export function calculateLevelDistribution(salaries: any[]): LevelDistributionItem[] {
+export function calculateLevelDistribution(salaries: SalaryLike[]): LevelDistributionItem[] {
   const groups: Record<string, number[]> = {};
   
   for (const s of salaries) {
@@ -38,6 +44,5 @@ export function calculateLevelDistribution(salaries: any[]): LevelDistributionIt
     });
   }
 
-  // Sort by median compensation descending
   return distribution.sort((a, b) => b.median_compensation - a.median_compensation);
 }

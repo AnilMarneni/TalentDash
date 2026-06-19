@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export function serializeBigInt<T>(obj: T): any {
   if (obj === null || obj === undefined) {
     return obj;

@@ -4,7 +4,7 @@ import { PrismaClient, Level, Currency, Source } from "../src/generated/prisma/c
 import { companies } from "../src/lib/seed-data";
 import { COMPANY_TIERS } from "../src/lib/company-tiers";
 import { SALARY_BANDS } from "../src/lib/salary-bands";
-import { LOCATIONS, ROLES } from "../src/lib/constants";
+import { ROLES } from "../src/lib/constants";
 import { LEVEL_DISTRIBUTION } from "../src/lib/seed-config";
 import { randomNumber, varySalary } from "../src/lib/helpers";
 

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const serializedResult = serializeBigInt(comparisonResult);
 
     return NextResponse.json(serializedResult, { status: 200 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("GET compare API error:", error);
     return NextResponse.json(
       { error: "Internal server error" },

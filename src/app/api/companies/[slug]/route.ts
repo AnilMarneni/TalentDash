@@ -28,7 +28,7 @@ export async function GET(
         "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400",
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("GET company slug API error:", error);
     return NextResponse.json(
       { error: "Internal server error" },

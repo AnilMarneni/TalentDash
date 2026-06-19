@@ -1,4 +1,4 @@
-import { Salary, SalaryWithCompany } from "./salary";
+import { SalaryWithCompany } from "./salary";
 
 export interface PaginatedMeta {
   total: number;

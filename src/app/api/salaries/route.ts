@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         "Cache-Control": "s-maxage=300, stale-while-revalidate=3600",
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("GET salaries API error:", error);
     return NextResponse.json(
       { error: "Internal server error" },

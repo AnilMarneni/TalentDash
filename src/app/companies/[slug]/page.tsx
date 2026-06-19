@@ -16,7 +16,6 @@ interface PageProps {
 }
 
 export async function generateStaticParams() {
-  // Query DB directly for static param compilation
   const companies = await prisma.company.findMany({
     select: { slug: true },
   });
@@ -57,7 +56,6 @@ export default async function CompanySlugPage(props: PageProps) {
     records_count,
   } = companyDetails;
 
-  // Find the primary currency of this company for overall statistic card display
   const currencies = salaries.map((s) => s.currency);
   const primaryCurrency = currencies.reduce(
     (a, b, _, arr) =>
@@ -66,184 +64,187 @@ export default async function CompanySlugPage(props: PageProps) {
   );
 
   return (
-    <div className="flex-1 bg-zinc-50 min-h-screen">
+    <div className="flex-1 bg-zinc-50/50 min-h-screen">
       {/* JSON-LD Schema */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={generateCompanyJsonLd(company, median_total_compensation, records_count)}
       />
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white border-b border-zinc-200">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/salaries" className="text-xl font-bold tracking-tight text-zinc-950 flex items-center gap-1">
-              <span className="text-rose-500">Talent</span>
-              <span>Dash</span>
-            </Link>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link href="/salaries" className="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition">
-                Salaries
-              </Link>
-              <Link href="/compare" className="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition">
-                Compare
-              </Link>
-            </nav>
-          </div>
-          <div>
-            <Link
-              href="/salaries"
-              className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-200 bg-white px-4 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition"
-            >
-              Browse All
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-6">
         {/* Breadcrumbs */}
-        <div className="mb-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-          <Link href="/salaries" className="hover:text-zinc-600 transition">
+        <div className="mb-4 text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+          <Link href="/salaries" className="hover:text-zinc-600 transition-colors">
             Companies
           </Link>
-          <span>/</span>
+          <span className="text-zinc-300">/</span>
           <span className="text-zinc-600">{company.name}</span>
         </div>
 
         {/* Company Header Card */}
-        <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm mb-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h1 className="text-3xl font-extrabold text-zinc-950 tracking-tight">{company.name}</h1>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2 text-sm text-zinc-500">
-              <span className="font-medium text-zinc-700">{company.industry}</span>
-              <span className="text-zinc-300">•</span>
-              <span>HQ: {company.headquarters}</span>
-              {company.founded_year && (
-                <>
-                  <span className="text-zinc-300">•</span>
-                  <span>Founded: {company.founded_year}</span>
-                </>
-              )}
-              {company.headcount_range && (
-                <>
-                  <span className="text-zinc-300">•</span>
-                  <span>Size: {company.headcount_range} Employees</span>
-                </>
-              )}
-            </div>
+        <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-xs mb-6">
+          <h1 className="text-2xl font-bold text-zinc-950 tracking-tight">{company.name}</h1>
+          <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
+            <span className="bg-zinc-50 border border-zinc-200 text-zinc-700 text-xs px-2.5 py-0.5 rounded-full font-semibold">
+              {company.industry}
+            </span>
+            <span className="bg-zinc-50 border border-zinc-200 text-zinc-600 text-xs px-2.5 py-0.5 rounded-full font-medium">
+              HQ: {company.headquarters}
+            </span>
+            {company.founded_year && (
+              <span className="bg-zinc-50 border border-zinc-200 text-zinc-600 text-xs px-2.5 py-0.5 rounded-full font-medium">
+                Founded: {company.founded_year}
+              </span>
+            )}
+            {company.headcount_range && (
+              <span className="bg-zinc-50 border border-zinc-200 text-zinc-600 text-xs px-2.5 py-0.5 rounded-full font-medium">
+                Size: {company.headcount_range} Employees
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* 4-Card Metrics Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {/* Median Card */}
-          <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
-            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
-              Median Total Compensation
+          <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-xs">
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1">
+              Median Compensation
             </span>
-            <div className="text-3xl font-black text-rose-500 font-mono">
+            <div className="text-2xl font-black text-rose-600 font-mono tracking-tight">
               {formatSalaryCompact(median_total_compensation, primaryCurrency)}
             </div>
-            <span className="text-xs text-zinc-400 mt-2 block font-medium">
-              Representative of {primaryCurrency} postings
+            <span className="text-[10px] text-zinc-500 mt-1 block font-medium">
+              Midpoint of all salary records
             </span>
           </div>
 
-          {/* Min/Max Card */}
-          <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
-            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
-              Compensation Range (Min - Max)
+          {/* Highest Card */}
+          <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-xs">
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1">
+              Highest Compensation
             </span>
-            <div className="text-xl font-bold text-zinc-950 font-mono">
-              {formatSalaryCompact(min_compensation, primaryCurrency)} - {formatSalaryCompact(max_compensation, primaryCurrency)}
+            <div className="text-2xl font-bold text-zinc-900 font-mono tracking-tight">
+              {formatSalaryCompact(max_compensation, primaryCurrency)}
             </div>
-            <span className="text-xs text-zinc-400 mt-2 block font-medium">
-              Based on the spread of records
+            <span className="text-[10px] text-zinc-500 mt-1 block font-medium">
+              Maximum total package reported
             </span>
           </div>
 
-          {/* Record Count Card */}
-          <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
-            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block mb-1">
-              Verified Postings
+          {/* Lowest Card */}
+          <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-xs">
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1">
+              Lowest Compensation
             </span>
-            <div className="text-3xl font-black text-zinc-900">
+            <div className="text-2xl font-bold text-zinc-900 font-mono tracking-tight">
+              {formatSalaryCompact(min_compensation, primaryCurrency)}
+            </div>
+            <span className="text-[10px] text-zinc-500 mt-1 block font-medium">
+              Minimum total package reported
+            </span>
+          </div>
+
+          {/* Salary Count Card */}
+          <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-xs">
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block mb-1">
+              Salary Count
+            </span>
+            <div className="text-2xl font-black text-zinc-900 tracking-tight">
               {records_count}
             </div>
-            <span className="text-xs text-zinc-400 mt-2 block font-medium">
-              Independently verified records
+            <span className="text-[10px] text-zinc-500 mt-1 block font-medium">
+              Total verified data points
             </span>
           </div>
         </div>
 
-        {/* Charts & Distributions */}
-        {level_distribution.length > 0 && (
-          <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm mb-8">
-            <h2 className="text-lg font-bold text-zinc-950 mb-4 tracking-tight">Compensation By Level</h2>
-            <LevelDistributionChart data={level_distribution} currency={primaryCurrency} />
+        {salaries.length === 0 ? (
+          <div className="bg-white border border-zinc-200 rounded-xl p-12 text-center max-w-md mx-auto my-12 shadow-xs">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-50 border border-zinc-300 mb-4 text-zinc-500 text-lg">
+              📊
+            </div>
+            <h3 className="text-sm font-bold text-zinc-900 mb-1">No salary records available</h3>
+            <p className="text-xs text-zinc-600 leading-relaxed">
+              There are currently no verified salary records in our database for {company.name}.
+            </p>
           </div>
+        ) : (
+          <>
+            {/* Charts & Distributions */}
+            {level_distribution.length > 0 && (
+              <div className="bg-white border border-zinc-200 rounded-xl p-5 shadow-xs mb-6">
+                <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-4">Compensation By Level</h2>
+                <LevelDistributionChart data={level_distribution} currency={primaryCurrency} />
+              </div>
+            )}
+
+            {/* Salaries Table */}
+            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
+              <div className="px-6 py-3.5 border-b border-zinc-200/60 bg-zinc-50/50 flex justify-between items-center text-xs">
+                <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                  {company.name} Salary Records
+                </h2>
+                <span className="font-semibold text-zinc-700">
+                  Sorted by Total Comp
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[850px]">
+                  <thead>
+                    <tr className="sticky top-0 bg-white border-b border-zinc-200 text-[10px] font-bold text-zinc-500 uppercase tracking-wider z-10 shadow-[0_1px_0_0_rgba(228,228,231,0.6)]">
+                      <th className="px-6 py-3.5">Role</th>
+                      <th className="px-6 py-3.5">Level</th>
+                      <th className="px-6 py-3.5">Location</th>
+                      <th className="px-6 py-3.5 text-center">Experience</th>
+                      <th className="px-6 py-3.5 text-right">Base</th>
+                      <th className="px-6 py-3.5 text-right">Bonus</th>
+                      <th className="px-6 py-3.5 text-right">Stock</th>
+                      <th className="px-6 py-3.5 text-right text-zinc-800 font-bold bg-rose-500/[0.01]">Total Comp</th>
+                      <th className="px-6 py-3.5 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 text-xs font-medium text-zinc-600">
+                    {salaries.map((item) => (
+                      <tr key={item.id} className="hover:bg-zinc-50/50 even:bg-zinc-50/[0.1] transition-colors">
+                        <td className="px-6 py-3.5 text-zinc-900 font-bold">{item.role}</td>
+                        <td className="px-6 py-3.5">
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${mapLevelToColor(item.level)}`}>
+                            {mapLevelToBadge(item.level)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3.5 text-zinc-650">{item.location}</td>
+                        <td className="px-6 py-3.5 text-center font-mono text-zinc-600">{item.experience_years} yrs</td>
+                        <td className="px-6 py-3.5 text-right font-mono text-zinc-800">
+                          {formatSalaryCompact(Number(item.base_salary), item.currency)}
+                        </td>
+                        <td className="px-6 py-3.5 text-right font-mono text-zinc-500">
+                          {formatSalaryCompact(Number(item.bonus), item.currency)}
+                        </td>
+                        <td className="px-6 py-3.5 text-right font-mono text-zinc-800">
+                          {formatSalaryCompact(Number(item.stock), item.currency)}
+                        </td>
+                        {/* Total Comp Highlight */}
+                        <td className="px-6 py-3.5 text-right font-mono font-black text-rose-600 text-sm bg-rose-500/[0.015]">
+                          {formatSalaryCompact(Number(item.total_compensation), item.currency)}
+                        </td>
+                        <td className="px-6 py-3.5 text-center">
+                          <Link
+                            href={`/compare?s1=${item.id}`}
+                            className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-500 hover:text-rose-600 hover:underline transition-colors"
+                          >
+                            Compare ⚖️
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
-
-        {/* Salaries Table */}
-        <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
-          <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center">
-            <h2 className="text-sm font-bold text-zinc-500 uppercase tracking-wider">
-              {company.name} Salaries
-            </h2>
-            <span className="text-xs text-zinc-400 font-semibold uppercase">
-              Sorted by Total Comp
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-zinc-100 text-xs font-semibold text-zinc-500 uppercase tracking-wider bg-zinc-50/50">
-                  <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4">Level</th>
-                  <th className="px-6 py-4">Location</th>
-                  <th className="px-6 py-4 text-center">Exp (Yrs)</th>
-                  <th className="px-6 py-4 text-right">Base Salary</th>
-                  <th className="px-6 py-4 text-right">Stock</th>
-                  <th className="px-6 py-4 text-right">Total Comp</th>
-                  <th className="px-6 py-4 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 text-sm">
-                {salaries.map((item) => (
-                  <tr key={item.id} className="hover:bg-zinc-50/50 transition-colors">
-                    <td className="px-6 py-4 text-zinc-950 font-semibold">{item.role}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${mapLevelToColor(item.level)}`}>
-                        {mapLevelToBadge(item.level)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-zinc-500 font-medium">{item.location}</td>
-                    <td className="px-6 py-4 text-center text-zinc-600">{item.experience_years}</td>
-                    <td className="px-6 py-4 text-right text-zinc-600 font-mono">
-                      {formatSalaryCompact(Number(item.base_salary), item.currency)}
-                    </td>
-                    <td className="px-6 py-4 text-right text-zinc-600 font-mono">
-                      {formatSalaryCompact(Number(item.stock), item.currency)}
-                    </td>
-                    <td className="px-6 py-4 text-right font-bold text-base text-rose-500 font-mono">
-                      {formatSalaryCompact(Number(item.total_compensation), item.currency)}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <Link
-                        href={`/compare?s1=${item.id}`}
-                        className="text-xs font-bold text-rose-500 hover:text-rose-600 hover:underline"
-                      >
-                        Compare
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </main>
     </div>
   );

@@ -9,7 +9,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // Validate request payload
     const validation = IngestSalarySchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
@@ -32,38 +31,32 @@ export async function POST(request: NextRequest) {
       confidence_score,
     } = validation.data;
 
-    // Compute total compensation
     const totalCompensation = base_salary + bonus + stock;
-
-    // Normalize company name & slug
     const normalizedName = companyName.trim().toLowerCase();
     const companySlug = slugify(companyName, { lower: true, strict: true });
 
-    // Look up or create company
     let company = await prisma.company.findUnique({
       where: { normalized_name: normalizedName },
     });
 
     if (!company) {
-      // Create new company record
       company = await prisma.company.create({
         data: {
           name: companyName.trim(),
           slug: companySlug,
           normalized_name: normalizedName,
-          industry: "Technology", // default fallback
-          headquarters: "Remote", // default fallback
+          industry: "Technology",
+          headquarters: "Remote",
         },
       });
     }
 
-    // Duplicate Check
     const duplicate = await isDuplicateSalary({
-      companyId: company.id,
+      company_id: company.id,
       role,
       level,
       location,
-      totalCompensation,
+      total_compensation: totalCompensation,
     });
 
     if (duplicate) {
@@ -73,7 +66,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert salary record
     const createdSalary = await prisma.salary.create({
       data: {
         company_id: company.id,
@@ -100,10 +92,11 @@ export async function POST(request: NextRequest) {
       { success: true, data: serializeBigInt(createdSalary) },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("Ingest salary error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Internal server error", message: error.message },
+      { error: "Internal server error", message },
       { status: 500 }
     );
   }
